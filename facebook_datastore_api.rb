@@ -68,7 +68,6 @@ def post_request(method, params, session_key = nil)
     curl.verbose = true
   end
   c.http_post(post_string)
-#  c.perform
   return c.body_str
 end
 
@@ -77,9 +76,6 @@ def call_method(method, params, session_key = nil)
   return xml
 end
 
-#def query(query_string)
-#  call_method('facebook.Fql.query', { "query" => query_string, "session_key" => self.session_key})
-#end
 
 # user preference API
 
@@ -117,7 +113,7 @@ def getUserPreference(pref_id, uid = nil)
   end
   xml = call_method('facebook.data.getUserPreference', params)
   handle_exceptions(xml)
-  return Hpricot::XML(xml).search('data_getUserPreference_response').inner_html
+  return CGI::unescapeHTML(Hpricot::XML(xml).search('data_getUserPreference_response').inner_html)
 end
 
 # takes an optional user id (if the user ID is not passed, the session key must be set)
@@ -130,7 +126,7 @@ def getUserPreferences(uid = nil)
   xml = call_method('facebook.data.getUserPreferences', params)
   results = Hash.new
   for p in Hpricot::XML(xml).search('preference')
-    results = results.merge({ Hpricot::XML(p.inner_html).search('pref_id').inner_html => Hpricot::XML(p.inner_html).search('value').inner_html})
+    results = results.merge({ CGI::unescapeHTML(Hpricot::XML(p.inner_html).search('pref_id').inner_html) => CGI::unescapeHTML(Hpricot::XML(p.inner_html).search('value').inner_html)})
   end
   return results
 end
@@ -180,7 +176,7 @@ def getObjectType(name)
   results = Array.new
   for n in Hpricot::XML(xml).search('object_property_info')
     n = n.inner_html
-    results << { "name" => Hpricot::XML(n).search('name').inner_html, "data_type" => Hpricot::XML(n).search('data_type').inner_html, "index_type" => Hpricot::XML(n).search('index_type').inner_html }
+    results << { "name" => CGI::unescapeHTML(Hpricot::XML(n).search('name').inner_html), "data_type" => CGI::unescapeHTML(Hpricot::XML(n).search('data_type').inner_html), "index_type" => CGI::unescapeHTML(Hpricot::XML(n).search('index_type').inner_html) }
   end
   handle_exceptions(xml)
   return results
@@ -191,7 +187,7 @@ def getObjectTypes
   xml = call_method('facebook.data.getObjectTypes', { })
   results = Array.new
   for n in Hpricot::XML(xml).search('name')
-    results << n.inner_html
+    results << CGI::unescapeHTML(n.inner_html)
   end
   handle_exceptions(xml)
   return results
@@ -204,7 +200,7 @@ end
 def createObject(obj_type, properties)  # create a new object
   xml = call_method('facebook.data.createObject', { "obj_type" => obj_type, "properties" => properties.to_json})
   handle_exceptions(xml)
-  return Hpricot::XML(xml).search('data_createObject_response').inner_html
+  return CGI::unescapeHTML(Hpricot::XML(xml).search('data_createObject_response').inner_html)
 end
 
 # returns true if successful, raises an error otherwise
@@ -238,7 +234,7 @@ def getObject(obj_id, prop_names = nil) # get an object's properties by its id
   handle_exceptions(xml)
   results = Array.new
   for r in Hpricot::XML(xml).search('data_getObject_response_elt')
-    results << r.inner_html
+    results << CGI::unescapeHTML(r.inner_html)
   end
   return results
 end
@@ -251,7 +247,7 @@ def getObjects(obj_ids) # get properties of a list of objects by ids
   for r in Hpricot::XML(xml).search('data_getObjects_response_elt')
     values = Array.new
     for v in Hpricot::XML(r.inner_html).search('data_getObjects_response_elt_elt')
-      values << v.inner_html
+      values << CGI::unescapeHTML(v.inner_html)
     end
     results << values
   end
@@ -262,7 +258,7 @@ end
 def getObjectProperty(obj_id, prop_name) # get an object's one property
   xml = call_method('facebook.data.getObjectProperty', { "obj_id" => obj_id, "prop_name" => prop_name})
   handle_exceptions(xml)
-  return Hpricot::XML(xml).search('data_getObjectProperty_response').inner_html
+  return CGI::unescapeHTML(Hpricot::XML(xml).search('data_getObjectProperty_response').inner_html)
 end
 
 # returns true if successful
@@ -280,7 +276,7 @@ def getHashValue(obj_type, key, prop_name) # get a property value by a hash key
   if result == ''
     return nil
   else
-    return result
+    return CGI::unescapeHTML(result)
   end
 end
 
@@ -288,14 +284,14 @@ end
 def setHashValue(obj_type, key, value, prop_name) # set a property value by a hash key
   xml = call_method('facebook.data.setHashValue', { "obj_type" => obj_type, "key" => key, "prop_name" => prop_name, "value" => value})
   handle_exceptions(xml)
-  return Hpricot::XML(xml).search('data_setHashValue_response').inner_html
+  return CGI::unescapeHTML(Hpricot::XML(xml).search('data_setHashValue_response').inner_html)
 end
 
 # returns the new value of the property after incrementing
 def incHashValue(obj_type, key, prop_name, increment = 1) # increment/decrement a property value by a hash key
   xml = call_method('facebook.data.incHashValue', { "obj_type" => obj_type, "key" => key, "prop_name" => prop_name, "increment" => increment})
   handle_exceptions(xml)
-  return Hpricot::XML(xml).search('data_incHashValue_response').inner_html
+  return CGI::unescapeHTML(Hpricot::XML(xml).search('data_incHashValue_response').inner_html)
 end
 
 # returns true on success
@@ -314,7 +310,7 @@ end
 
 # Association Data Definition API
 
-
+# returns true on success
 def defineAssociation(name, assoc_type, assoc_info1, assoc_info2, inverse = nil)  # create a new object association
   if inverse
     xml = call_method('facebook.data.defineAssociation', { "name" => name, "assoc_type" => assoc_type, "assoc_info1" => assoc_info1.to_json, "assoc_info2" => assoc_info2.to_json, "inverse" => inverse})
@@ -325,12 +321,14 @@ def defineAssociation(name, assoc_type, assoc_info1, assoc_info2, inverse = nil)
   return true
 end
 
+# returns true on success
 def undefineAssociation(name) # remove a previously defined association and all its data
   xml = call_method('facebook.data.undefineAssociation', { "name" => name })
   handle_exceptions(xml)
   return true
 end
 
+# returns true on success
 def renameAssociation(oldname, newname, new_alias1 = nil, new_alias2 = nil) # rename a previously defined association
   params = { "name" => oldname, "new_name" => newname }
   if new_alias1
@@ -349,11 +347,11 @@ end
 def getAssociationDefinition(name) # get definition of a previously defined association
   xml = call_method('facebook.data.getAssociationDefinition', { "name" => name })
   assoc_info1 = Hpricot::XML(xml).search('assoc_info1_elt')
-  assoc_info1_hash = { "alias"=> assoc_info1[0].inner_html, "object_type" => assoc_info1[1].inner_html, "unique" => assoc_info1[2].inner_html}
+  assoc_info1_hash = { "alias"=> CGI::unescapeHTML(assoc_info1[0].inner_html), "object_type" => CGI::unescapeHTML(assoc_info1[1].inner_html), "unique" => CGI::unescapeHTML(assoc_info1[2].inner_html)}
   assoc_info2 = Hpricot::XML(xml).search('assoc_info2_elt')
-  assoc_info2_hash = { "alias"=> assoc_info2[0].inner_html, "object_type" => assoc_info2[1].inner_html, "unique" => assoc_info2[2].inner_html}
+  assoc_info2_hash = { "alias"=> CGI::unescapeHTML(assoc_info2[0].inner_html), "object_type" => CGI::unescapeHTML(assoc_info2[1].inner_html), "unique" => CGI::unescapeHTML(assoc_info2[2].inner_html)}
 
-  return { "name" => Hpricot::XML(xml).search('name').inner_html, "assoc_type" => Hpricot::XML(xml).search('assoc_type').inner_html, "assoc_info1" => assoc_info1_hash, "assoc_info2" => assoc_info2_hash }
+  return { "name" => CGI::unescapeHTML(Hpricot::XML(xml).search('name').inner_html), "assoc_type" => CGI::unescapeHTML(Hpricot::XML(xml).search('assoc_type').inner_html), "assoc_info1" => assoc_info1_hash, "assoc_info2" => assoc_info2_hash }
 end
 
 # returns an array of assoc definitions; each def is formatted the same as the results from getassociationdefinition
@@ -362,24 +360,25 @@ def getAssociationDefinitions # get definitions of all previously defined associ
   results = Array.new
   for row in Hpricot::XML(xml).search('object_assoc_info')
     assoc_info1 = Hpricot::XML(row.inner_html).search('assoc_info1_elt')
-    assoc_info1_hash = { "alias"=> assoc_info1[0].inner_html, "object_type" => assoc_info1[1].inner_html, "unique" => assoc_info1[2].inner_html}
+    assoc_info1_hash = { "alias"=> CGI::unescapeHTML(assoc_info1[0].inner_html), "object_type" => CGI::unescapeHTML(assoc_info1[1].inner_html), "unique" => CGI::unescapeHTML(assoc_info1[2].inner_html)}
     assoc_info2 = Hpricot::XML(row.inner_html).search('assoc_info2_elt')
-    assoc_info2_hash = { "alias"=> assoc_info2[0].inner_html, "object_type" => assoc_info2[1].inner_html, "unique" => assoc_info2[2].inner_html}
+    assoc_info2_hash = { "alias"=> CGI::unescapeHTML(assoc_info2[0].inner_html), "object_type" => CGI::unescapeHTML(assoc_info2[1].inner_html), "unique" => CGI::unescapeHTML(assoc_info2[2].inner_html)}
     
-    results << { "name" => Hpricot::XML(row.inner_html).search('name').inner_html, "assoc_type" => Hpricot::XML(row.inner_html).search('assoc_type').inner_html, "assoc_info1" => assoc_info1_hash, "assoc_info2" => assoc_info2_hash }
+    results << { "name" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('name').inner_html), "assoc_type" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('assoc_type').inner_html), "assoc_info1" => assoc_info1_hash, "assoc_info2" => assoc_info2_hash }
   end
   return results
 end
 
 # Association Data Access API
 
+# returns true on success
 def setAssociation(name, obj_id1, obj_id2, data = nil, assoc_time = nil) # create an association between two objects
   params = { "name" => name, "obj_id1" => obj_id1, "obj_id2" => obj_id2 }
   unless data.nil?
- #   params = params.merge({"data" => data})
+   params = params.merge({"data" => data})
   end
   unless assoc_time.nil?
-#    params = params.merge({"assoc_time" => assoc_time})
+    params = params.merge({"assoc_time" => assoc_time})
   end
   xml = call_method("facebook.data.setAssociation", params)
   handle_exceptions(xml)
@@ -387,6 +386,7 @@ def setAssociation(name, obj_id1, obj_id2, data = nil, assoc_time = nil) # creat
 end
 
 # takes a list of assocs and an optional name
+# returns true on success
 def setAssociations(assocs, name = nil) # create a list of associations between pairs of objects
   params = { "assocs" => assocs.to_json }
   if name
@@ -397,12 +397,14 @@ def setAssociations(assocs, name = nil) # create a list of associations between 
   return true
 end
 
+# returns true on success
 def removeAssociation(name, obj_id1, obj_id2) # remove an association between two objects
   xml = call_method('facebook.data.removeAssociation', { "name" => name, "obj_id1" => obj_id1, "obj_id2" => obj_id2 })
   handle_exceptions(xml)
   return true
 end
 
+# returns true on success
 def removeAssociations(assocs, name = nil) # remove associations between pairs of objects
   params = { "assocs" => assocs.to_json }
   if name
@@ -414,28 +416,32 @@ def removeAssociations(assocs, name = nil) # remove associations between pairs o
 end
 
 # note: name is misleading! this removes ASSOCIATIONS, not the actual objects
+# returns true on success
 def removeAssociatedObjects(name, obj_id) # remove all associations of an object
   xml = call_method('facebook.data.removeAssociatedObjects', { "name" => name, "obj_id" => obj_id})
   handle_exceptions(xml)
   return true
 end
 
+# returns an array of hashes
 def getAssociatedObjects(name, obj_id, no_data = true) # get ids of an object's associated objects
   xml = call_method("facebook.data.getAssociatedObjects", { "name" => name, "obj_id" => obj_id, "no_data" => no_data.to_s })
+  handle_exceptions(xml)
   results = Array.new
   for row in Hpricot::XML(xml).search('object_association')
-    results << { "id2" => Hpricot::XML(row.inner_html).search('id2').inner_html, "data" => Hpricot::XML(row.inner_html).search('data').inner_html, "time" => Hpricot::XML(row.inner_html).search('time').inner_html }
+    results << { "id2" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('id2').inner_html), "data" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('data').inner_html), "time" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('time').inner_html) }
   end
-  handle_exceptions(xml)
   return results
 end
 
+# returns the number of objects (integer)
 def getAssociatedObjectCount(name, obj_id) # get count of an object's associated objects
   xml = call_method("facebook.data.getAssociatedObjectCount", { "name" => name, "obj_id" => obj_id})
   handle_exceptions(xml)
   return Hpricot::XML(xml).search('data_getAssociatedObjectCount_response').inner_html.to_i
 end
 
+# returns an array of integers
 def getAssociatedObjectCounts(name, ids) # get counts of associated objects of a list of objects.
   xml = call_method("facebook.data.getAssociatedObjectCounts", { "name" => name, "obj_ids" => ids.to_json})
   handle_exceptions(xml)
@@ -446,11 +452,12 @@ def getAssociatedObjectCounts(name, ids) # get counts of associated objects of a
   return results
 end
 
+# returns an array of hashes
 def getAssociations(obj_id1, obj_id2, no_data = false) # get all associations between two objects
   xml = call_method("facebook.data.getAssociations", { "obj_id1" => obj_id1, "obj_id2" => obj_id2, "no_data" => no_data.to_s })
   results = Array.new
   for row in Hpricot::XML(xml).search('object_association')
-    results << { "id1" => Hpricot::XML(row.inner_html).search('id1').inner_html, "id2" => Hpricot::XML(row.inner_html).search('id2').inner_html, "data" => Hpricot::XML(row.inner_html).search('data').inner_html, "time" => Hpricot::XML(row.inner_html).search('time').inner_html }
+    results << { "id1" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('id1').inner_html), "id2" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('id2').inner_html), "data" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('data').inner_html), "time" => CGI::unescapeHTML(Hpricot::XML(row.inner_html).search('time').inner_html) }
   end
   return results
 end
